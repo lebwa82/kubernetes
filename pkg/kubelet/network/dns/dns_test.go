@@ -313,7 +313,7 @@ func TestGetPodDNSNameserverLimits(t *testing.T) {
 		{name: "three after merge", inherited: host[:2], config: custom, want: host[:3]},
 		{name: "inherited overflow", inherited: host, want: host[:3], wantLog: true},
 		{name: "only custom searches", inherited: host, config: &v1.PodDNSConfig{Searches: []string{"example.com"}}, want: host[:3], wantLog: true},
-		{name: "only duplicate server", inherited: host, config: custom, want: host[:3], wantLog: true},
+		{name: "pod repeats omitted server", inherited: host, config: &v1.PodDNSConfig{Nameservers: host[3:]}, want: host[:3], wantLog: true},
 		{name: "new pod server omitted", inherited: host[:3], config: &v1.PodDNSConfig{Nameservers: host[3:]}, want: host[:3], wantEvent: true},
 	}
 	for _, tc := range tests {
@@ -359,10 +359,12 @@ func TestInheritedNameserverLogRateLimit(t *testing.T) {
 			assert.Equal(t, wantEvent, fetchEvent(recorder) != "", name)
 		}
 
+		custom := &v1.PodDNSConfig{Nameservers: []string{"192.0.2.5"}}
+		check("custom-first", custom, false, true)
 		check("first", nil, true, false)
 		time.Sleep(time.Hour - time.Second)
 		check("second", nil, false, false)
-		check("custom", &v1.PodDNSConfig{Nameservers: []string{"192.0.2.5"}}, false, true)
+		check("custom", custom, false, true)
 		time.Sleep(time.Second)
 		check("third", nil, true, false)
 	})
